@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>夢溪筆談．曲面鏡成像 — 透鏡與面鏡 3D 互動實驗室</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#121a30; --panel2:#1a2542; --ink:#eaf0ff;
+    --sub:#9fb0d6; --line:#2a3a63; --real:#ff8a3d; --virtual:#3ad1ff;
+    --accent:#7c9cff; --good:#5fe0a0; --warn:#ffd24a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;}
+  #app{display:flex;height:100vh;width:100vw;overflow:hidden;}
+  #stage{flex:1 1 auto;position:relative;min-width:0;}
+  #canvas{width:100%;height:100%;display:block;}
+  #stageTitle{position:absolute;top:14px;left:18px;z-index:5;pointer-events:none;}
+  #stageTitle h1{margin:0;font-size:18px;letter-spacing:1px;text-shadow:0 2px 8px #000;}
+  #stageTitle p{margin:3px 0 0;font-size:12px;color:var(--sub);text-shadow:0 2px 8px #000;}
+  #viewBtns{position:absolute;top:14px;right:14px;z-index:5;display:flex;gap:6px;}
+  #legend{position:absolute;left:18px;bottom:14px;z-index:5;font-size:12px;
+    background:rgba(10,14,30,.6);border:1px solid var(--line);border-radius:8px;padding:8px 10px;line-height:1.7;}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .seg{display:inline-block;width:18px;height:0;border-top:3px solid;margin-right:6px;vertical-align:middle;}
+  #panel{flex:0 0 360px;width:360px;background:var(--panel);border-left:1px solid var(--line);
+    overflow-y:auto;padding:16px 16px 40px;}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;}
+  .card h2{margin:0 0 10px;font-size:14px;color:var(--accent);letter-spacing:.5px;
+    display:flex;align-items:center;gap:8px;}
+  .card h2 .num{background:var(--accent);color:#0b1020;border-radius:6px;font-size:12px;
+    width:20px;height:20px;display:grid;place-items:center;font-weight:700;}
+  .elemGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .elemBtn{background:#0f1830;border:1px solid var(--line);border-radius:10px;color:var(--ink);
+    padding:10px 8px;cursor:pointer;font-size:13px;text-align:center;transition:.15s;line-height:1.4;}
+  .elemBtn small{display:block;color:var(--sub);font-size:11px;margin-top:2px;}
+  .elemBtn:hover{border-color:var(--accent);}
+  .elemBtn.active{background:var(--accent);color:#0b1020;border-color:var(--accent);font-weight:700;}
+  .elemBtn.active small{color:#102040;}
+  .row{margin:12px 0;}
+  .row label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;color:var(--sub);}
+  .row label b{color:var(--ink);font-variant-numeric:tabular-nums;}
+  input[type=range]{width:100%;-webkit-appearance:none;height:6px;border-radius:6px;
+    background:linear-gradient(90deg,#2a3a63,#2a3a63);outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+    background:var(--accent);cursor:pointer;border:3px solid #0b1020;box-shadow:0 0 0 1px var(--accent);}
+  .btn{background:#0f1830;border:1px solid var(--line);border-radius:8px;color:var(--ink);
+    padding:6px 12px;cursor:pointer;font-size:12px;transition:.15s;}
+  .btn:hover{border-color:var(--accent);}
+  .btn.on{background:var(--accent);color:#0b1020;border-color:var(--accent);}
+  .stat{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .stat .box{background:#0f1830;border:1px solid var(--line);border-radius:10px;padding:8px 10px;}
+  .stat .box .k{font-size:11px;color:var(--sub);}
+  .stat .box .v{font-size:15px;font-weight:700;margin-top:2px;}
+  .tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:700;margin:3px 4px 0 0;}
+  .tag.real{background:rgba(255,138,61,.18);color:var(--real);border:1px solid var(--real);}
+  .tag.virtual{background:rgba(58,209,255,.16);color:var(--virtual);border:1px solid var(--virtual);}
+  .tag.up{background:rgba(95,224,160,.15);color:var(--good);border:1px solid var(--good);}
+  .tag.down{background:rgba(255,210,74,.15);color:var(--warn);border:1px solid var(--warn);}
+  .quote{font-size:15px;line-height:2;letter-spacing:1px;background:#0f1830;border-radius:10px;
+    padding:12px 14px;border:1px solid var(--line);}
+  .quote .hl{background:var(--warn);color:#1a1300;padding:1px 4px;border-radius:4px;font-weight:700;
+    box-shadow:0 0 12px rgba(255,210,74,.5);}
+  .interp{font-size:13px;color:var(--sub);line-height:1.8;margin-top:10px;}
+  .interp b{color:var(--ink);}
+  .apps{font-size:13px;line-height:1.85;}
+  .apps li{margin-bottom:4px;}
+  .apps b{color:var(--good);}
+  .mini{font-size:11px;color:var(--sub);margin-top:8px;line-height:1.7;}
+  #helpBtn{cursor:pointer;}
+  #overlay{position:absolute;inset:0;background:rgba(5,8,18,.82);z-index:20;display:none;
+    place-items:center;padding:30px;}
+  #overlay .inner{max-width:560px;background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:24px 26px;font-size:14px;line-height:1.9;}
+  #overlay h3{margin:0 0 12px;color:var(--accent);}
+  #overlay ul{padding-left:20px;margin:8px 0;}
+  ::-webkit-scrollbar{width:9px;}::-webkit-scrollbar-thumb{background:#2a3a63;border-radius:8px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <div id="stageTitle">
+      <h1>曲面鏡與透鏡成像 3D 實驗室</h1>
+      <p>夢溪筆談〈古人鑄鑑〉· 拖曳可旋轉觀察 · 滾輪縮放</p>
+    </div>
+    <div id="viewBtns">
+      <button class="btn" id="view2d">課本平視圖</button>
+      <button class="btn" id="view3d">3D 立體視角</button>
+      <button class="btn" id="helpBtn">使用說明</button>
+    </div>
+    <div id="legend">
+      <span class="dot" style="background:var(--real)"></span>實像（光線真實會聚）<br>
+      <span class="dot" style="background:var(--virtual)"></span>虛像（反向延長線會聚）<br>
+      <span class="seg" style="border-color:#ffe08a"></span>實際光線
+      &nbsp;<span class="seg" style="border-color:#7fd0ff;border-top-style:dashed"></span>延長線<br>
+      <span class="dot" style="background:#ff5d6c"></span>F 焦點（課文的「礙」）
+      &nbsp;<span class="dot" style="background:#b07cff"></span>C 球心 / 2F
+    </div>
+    <canvas id="canvas"></canvas>
+    <div id="overlay"><div class="inner">
+      <h3>怎麼操作這個實驗室？</h3>
+      <ul>
+        <li><b>選元件</b>：右側可切換 凹面鏡(窪) / 凸面鏡 / 凸透鏡 / 凹透鏡。</li>
+        <li><b>選物體</b>：可換成 🌸小花 / 🧸小熊 / 🕯️蠟燭 / ↑箭頭 來成像。</li>
+        <li><b>物體位置滑桿</b>：把物體拉近、拉遠，觀察像如何「放大、縮小、翻轉」。</li>
+        <li><b>焦距滑桿</b>：改變鏡片彎曲程度（焦距），焦點 F 與球心 C 會跟著移動。</li>
+        <li><b>看數據</b>：像距、放大率、實像/虛像、正立/倒立即時更新。</li>
+        <li><b>對照課文</b>：黃底螢光標出此刻對應沈括的哪一句話。</li>
+        <li><b>視角</b>：拖曳旋轉看 3D 立體鏡面；按「課本平視圖」回到作圖角度。</li>
+      </ul>
+      <p style="text-align:right;margin:14px 0 0;"><button class="btn" id="closeHelp">開始實驗</button></p>
+    </div></div>
+  </div>
+
+  <div id="panel">
+    <div class="card">
+      <h2><span class="num">1</span>選擇光學元件</h2>
+      <div class="elemGrid" id="elemGrid">
+        <button class="elemBtn active" data-type="concaveMirror">凹面鏡<small>窪·照人面大</small></button>
+        <button class="elemBtn" data-type="convexMirror">凸面鏡<small>凸·能全納人面</small></button>
+        <button class="elemBtn" data-type="convexLens">凸透鏡<small>放大鏡</small></button>
+        <button class="elemBtn" data-type="concaveLens">凹透鏡<small>近視眼鏡</small></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">2</span>選擇成像物體</h2>
+      <div class="elemGrid" id="objGrid" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+        <button class="elemBtn active" data-obj="flower">🌸<small>小花</small></button>
+        <button class="elemBtn" data-obj="bear">🧸<small>小熊</small></button>
+        <button class="elemBtn" data-obj="candle">🕯️<small>蠟燭</small></button>
+        <button class="elemBtn" data-obj="arrow">↑<small>箭頭</small></button>
+      </div>
+      <div class="mini">提示：選「箭頭」時最容易看清楚像是<b>正立還是倒立</b>；選小花、小熊則更直覺看到<b>放大、縮小與翻轉</b>。</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">3</span>操作滑桿</h2>
+      <div class="row">
+        <label>物體位置（物距 p）<b id="pVal">4.0</b></label>
+        <input type="range" id="pSlider" min="1.5" max="28" step="0.1" value="4">
+      </div>
+      <div class="row">
+        <label>焦距 |f|（鏡片彎曲程度）<b id="fVal">6.0</b></label>
+        <input type="range" id="fSlider" min="4" max="10" step="0.1" value="6">
+      </div>
+      <div class="row">
+        <label>物體大小（物高 h）<b id="hVal">3.0</b></label>
+        <input type="range" id="hSlider" min="1.5" max="4.5" step="0.1" value="3">
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn" id="playBtn">▶ 自動演示（近→遠）</button>
+        <button class="btn on" id="rayBtn">顯示光線</button>
+        <button class="btn on" id="markBtn">顯示 F / C</button>
+        <button class="btn" id="resetBtn">重設</button>
+      </div>
+      <div class="mini" id="playHint">按「自動演示」可讓物體由近到遠來回移動，觀察像如何從<b>正立放大虛像</b>→（過焦點）→<b>倒立實像</b>的完整變化。</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">4</span>成像結果</h2>
+      <div id="tags"></div>
+      <div class="stat" style="margin-top:10px;">
+        <div class="box"><div class="k">像距 q</div><div class="v" id="qOut">—</div></div>
+        <div class="box"><div class="k">放大率 m＝-q/p</div><div class="v" id="mOut">—</div></div>
+      </div>
+      <div class="mini" id="formula">成像公式：1/p ＋ 1/q ＝ 1/f（凹面鏡、凸透鏡 f＞0；凸面鏡、凹透鏡 f＜0）</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">5</span>對照課文：沈括〈古人鑄鑑〉</h2>
+      <div class="quote" id="quote">
+        古人鑄鑑，鑑大則平，<span data-k="curve">鑑小則凸</span>。凡<span data-k="big">鑑窪則照人面大</span>，<span data-k="small">凸則照人面小</span>。<br>
+        小鑑不能全現人面，<span data-k="small">故令微凸，收人面令小，則鑑雖小而能全納人面</span>。<br>
+        <span data-k="adjust">仍復量鑑之小大，增損高下，常令人面與鑑大小相若。</span><br>
+        <span data-k="end" style="color:var(--sub)">此工之巧智，後人不能造……此師曠所以傷知音也。</span>
+      </div>
+      <div class="interp" id="interp"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">6</span>現實原理與應用</h2>
+      <ul class="apps" id="apps"></ul>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/* =========================================================================
+   夢溪筆談．曲面鏡成像  互動光學實驗室
+   核心物理：薄透鏡 / 球面鏡共用成像公式  1/p + 1/q = 1/f
+   座標：光軸 = 世界 X 軸；高度 = Y 軸；元件位於 X=0；物體在左方 X=-p
+   ========================================================================= */
+
+// ---------- 狀態 ----------
+const state = { type:'concaveMirror', obj:'flower', f:6, p:4, h:3, showRays:true, showMark:true };
+
+// 可成像的物體（可愛模型）
+const OBJECTS = {
+  flower:{ emoji:'🌸', label:'小花' },
+  bear  :{ emoji:'🧸', label:'小熊' },
+  candle:{ emoji:'🕯️', label:'蠟燭' },
+  arrow :{ emoji:null, label:'箭頭' },
+};
+const emojiTexCache = {};
+function emojiTexture(emoji){
+  if(emojiTexCache[emoji]) return emojiTexCache[emoji];
+  const c=document.createElement('canvas'); c.width=c.height=256;
+  const ctx=c.getContext('2d');
+  ctx.font='200px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(emoji,128,140);
+  const tex=new THREE.CanvasTexture(c); tex.minFilter=THREE.LinearFilter;
+  emojiTexCache[emoji]=tex; return tex;
+}
+
+// 元件定義：sign = f 的正負；isMirror = 是否為面鏡（影響實像方向與光線反射）
+const ELEMENTS = {
+  concaveMirror:{ name:'凹面鏡（陽燧）', isMirror:true,  fSign:+1 },
+  convexMirror :{ name:'凸面鏡',         isMirror:true,  fSign:-1 },
+  convexLens   :{ name:'凸透鏡',         isMirror:false, fSign:+1 },
+  concaveLens  :{ name:'凹透鏡',         isMirror:false, fSign:-1 },
+};
+
+// ---------- Three.js 基本場景 ----------
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b1020);
+scene.fog = new THREE.Fog(0x0b1020, 60, 130);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+camera.position.set(10, 11, 42);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(0, 1, 0);
+// 只允許在「正面半球」旋轉，避免轉到平面背面造成左右鏡像的錯覺
+controls.minAzimuthAngle = -1.15;
+controls.maxAzimuthAngle =  1.15;
+controls.minPolarAngle = 0.30;
+controls.maxPolarAngle = Math.PI/2;
+controls.minDistance = 16;
+controls.maxDistance = 95;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+dir.position.set(20, 30, 25); scene.add(dir);
+const dir2 = new THREE.DirectionalLight(0x88aaff, 0.4);
+dir2.position.set(-25, 10, -10); scene.add(dir2);
+
+// 光軸（長桿）
+(function(){
+  const g = new THREE.CylinderGeometry(0.05,0.05,80,12);
+  const m = new THREE.MeshBasicMaterial({color:0x3a4d80});
+  const axis = new THREE.Mesh(g,m); axis.rotation.z = Math.PI/2; scene.add(axis);
+  // 地面參考格線
+  const grid = new THREE.GridHelper(120, 60, 0x1c2746, 0x141d36);
+  grid.position.y = -0.01; scene.add(grid);
+})();
+
+// ---------- 文字標籤（Sprite） ----------
+function makeLabel(text, color='#eaf0ff', size=46){
+  const c = document.createElement('canvas'); const s=256; c.width=s; c.height=128;
+  const ctx = c.getContext('2d');
+  ctx.font = `700 ${size}px "Microsoft JhengHei",sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.lineWidth=8; ctx.strokeStyle='rgba(0,0,0,.85)'; ctx.strokeText(text,s/2,64);
+  ctx.fillStyle=color; ctx.fillText(text,s/2,64);
+  const tex = new THREE.CanvasTexture(c); tex.minFilter=THREE.LinearFilter;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, depthTest:false, transparent:true}));
+  sp.scale.set(6,3,1);
+  return sp;
+}
+
+// ---------- 動態群組（每次更新重建） ----------
+const dynamic = new THREE.Group(); scene.add(dynamic);
+let elementMesh = null;            // 元件本體（只在 type/f 改變時重建）
+let lastElemKey = '';
+
+function disposeGroup(g){
+  while(g.children.length){
+    const c = g.children.pop();
+    if(c.geometry) c.geometry.dispose();
+    if(c.material){ if(c.material.map) c.material.map.dispose(); c.material.dispose(); }
+  }
+}
+
+// ---------- 建立 3D 元件本體 ----------
+function buildElement(){
+  const key = state.type + '|' + state.f.toFixed(1);
+  if(key === lastElemKey) return;
+  lastElemKey = key;
+  if(elementMesh){ scene.remove(elementMesh); disposeGroup(elementMesh); }
+  elementMesh = new THREE.Group();
+
+  const def = ELEMENTS[state.type];
+  if(def.isMirror){
+    const R = 2*state.f;                       // 曲率半徑
+    const apR = Math.min(7, 0.85*R);           // 孔徑半徑
+    const N = 40, pts = [];
+    for(let i=0;i<=N;i++){
+      const r = apR*i/N;
+      const sag = R - Math.sqrt(Math.max(0,R*R - r*r)); // 凹陷量
+      // 凹面鏡：開口朝物體(左,-X) → 鏡面往 +X 退；凸面鏡相反
+      const x = def.fSign>0 ? +sag : -sag;
+      pts.push(new THREE.Vector2(r, x));
+    }
+    const geo = new THREE.LatheGeometry(pts, 80);
+    geo.rotateZ(-Math.PI/2);                   // 旋轉軸 Y → 對齊光軸 X
+    const mat = new THREE.MeshStandardMaterial({
+      color:0xcfd6e6, metalness:0.95, roughness:0.18, side:THREE.DoubleSide,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    elementMesh.add(mesh);
+    // 背面暗色殼
+    const back = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+      color:0x223, metalness:0.2, roughness:0.9, side:THREE.BackSide}));
+    elementMesh.add(back);
+  } else {
+    const apR = 7, half = 1.4, N = 36, top=[], bot=[];
+    for(let i=0;i<=N;i++){
+      const r = apR*i/N, t = r/apR;
+      let d;
+      if(def.fSign>0) d = half*Math.sqrt(Math.max(0,1 - t*t));  // 凸透鏡：中厚邊薄
+      else            d = 0.35 + half*t*t;                       // 凹透鏡：中薄邊厚
+      top.push(new THREE.Vector2(r, +d));
+    }
+    // 上緣往外、下緣折回，形成封閉剖面
+    const pts = [];
+    for(let i=0;i<=N;i++) pts.push(top[i]);
+    for(let i=N;i>=0;i--) pts.push(new THREE.Vector2(top[i].x, -top[i].y));
+    const geo = new THREE.LatheGeometry(pts, 80);
+    geo.rotateZ(-Math.PI/2);
+    const mat = new THREE.MeshPhysicalMaterial({
+      color:0x9fdcff, metalness:0, roughness:0.05, transmission:0.85,
+      transparent:true, opacity:0.5, thickness:2, ior:1.5, side:THREE.DoubleSide,
+      clearcoat:1, clearcoatRoughness:0.05,
+    });
+    elementMesh.add(new THREE.Mesh(geo, mat));
+    // 邊框環，看得更清楚
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(apR, 0.12, 8, 80),
+      new THREE.MeshStandardMaterial({color:0x6fb8ff, metalness:0.6, roughness:0.3}));
+    elementMesh.add(ring);
+  }
+  scene.add(elementMesh);
+}
+
+// ---------- 3D 箭頭（物 / 像） ----------
+function makeArrow(x, height, color, opacity=1){
+  const g = new THREE.Group();
+  const dirUp = height>=0 ? 1 : -1;
+  const len = Math.abs(height);
+  const shaftLen = Math.max(0.001, len*0.78);
+  const headLen = len*0.22;
+  const mat = new THREE.MeshStandardMaterial({color, transparent:opacity<1, opacity,
+    metalness:0.1, roughness:0.5, emissive:new THREE.Color(color).multiplyScalar(0.15)});
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.18,shaftLen,16), mat);
+  shaft.position.y = dirUp*(shaftLen/2);
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.42, headLen, 20), mat);
+  head.position.y = dirUp*(shaftLen + headLen/2);
+  if(dirUp<0) head.rotation.x = Math.PI;
+  g.add(shaft); g.add(head);
+  g.position.set(x,0,0);
+  return g;
+}
+
+// 依目前選的物體建立 3D 物件（箭頭或 emoji 立板）
+// signedHeight：正=正立、負=倒立；|signedHeight| 反映放大率
+function makeObject(x, signedHeight, colorHex, opacity){
+  const kind = state.obj;
+  const up = signedHeight>=0 ? 1 : -1;
+  const len = Math.min(Math.abs(signedHeight), 12);   // 視覺尺寸上限，避免過大
+  const sh = up*len;
+  if(kind==='arrow' || !OBJECTS[kind].emoji){
+    return makeArrow(x, sh, colorHex, opacity);
+  }
+  const g = new THREE.Group();
+  // emoji 立板：底邊在光軸上，往 up 方向立起
+  const w = len*1.05, hh = len;
+  const tex = emojiTexture(OBJECTS[kind].emoji);
+  const mat = new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity,
+    side:THREE.DoubleSide, depthWrite:opacity>0.9});
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(w, hh), mat);
+  plane.position.y = up*hh/2;
+  if(up<0) plane.scale.y = -1;   // 倒立：只上下翻轉，左右維持原樣（課本表示法）
+  g.add(plane);
+  // 細莖，標出它「站在光軸上」並顯示高度
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,len,8),
+    new THREE.MeshBasicMaterial({color:colorHex, transparent:true, opacity:opacity*0.8}));
+  stem.position.y = up*len/2; g.add(stem);
+  g.position.set(x,0,0);
+  return g;
+}
+
+// ---------- 線段工具 ----------
+function addLine(points, colorHex, dashed=false){
+  const geo = new THREE.BufferGeometry().setFromPoints(points.map(p=>new THREE.Vector3(p.x,p.y,0)));
+  let mat;
+  if(dashed){
+    mat = new THREE.LineDashedMaterial({color:colorHex, dashSize:0.7, gapSize:0.5, transparent:true, opacity:0.8});
+    const line = new THREE.Line(geo, mat); line.computeLineDistances(); dynamic.add(line); return;
+  }
+  mat = new THREE.LineBasicMaterial({color:colorHex});
+  dynamic.add(new THREE.Line(geo, mat));
+}
+function marker(x, colorHex, label){
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.45,16,16),
+    new THREE.MeshStandardMaterial({color:colorHex, emissive:colorHex, emissiveIntensity:0.5}));
+  m.position.set(x,0,0); dynamic.add(m);
+  const lb = makeLabel(label, '#ffffff', 40); lb.scale.set(4,2,1);
+  lb.position.set(x,-1.6,0); dynamic.add(lb);
+}
+
+const V = (x,y)=>({x,y});
+
+// ---------- 主更新 ----------
+function update(){
+  const def = ELEMENTS[state.type];
+  const f = def.fSign * state.f;     // 帶號焦距
+  const p = state.p, h = state.h;
+
+  // 成像公式 1/p + 1/q = 1/f
+  const denom = (p - f);
+  const nearInfinity = Math.abs(denom) < 0.25;       // p≈f → 像在無窮遠
+  let q = nearInfinity ? Infinity : (p*f)/denom;
+  let m = nearInfinity ? Infinity : (-q/p);
+  const real = (q > 0);                              // q>0 為實像
+  const imgH = m*h;
+  // 像的 X 位置：透鏡 = q；面鏡 = -q（實像在鏡前同側）
+  const xImg = def.isMirror ? -q : q;
+
+  buildElement();
+  disposeGroup(dynamic);
+
+  // ---- 物體 ----
+  dynamic.add(makeObject(-p, h, 0xfff0a0, 1));
+  const objLb = makeLabel('物（'+OBJECTS[state.obj].label+'）', '#fff0a0');
+  objLb.scale.set(7,3,1); objLb.position.set(-p, h+1.8, 0); dynamic.add(objLb);
+
+  // ---- 焦點 / 球心標記 ----
+  if(state.showMark){
+    marker(-f, 0xff5d6c, 'F');                               // 物側焦點
+    if(def.isMirror) marker(-2*f, 0xb07cff, 'C');            // 球心
+    else             marker(+f, 0xff5d6c, "F'");             // 透鏡另一焦點
+  }
+
+  // ---- 像 ----
+  if(!nearInfinity && isFinite(xImg)){
+    const col = real ? 0xff8a3d : 0x3ad1ff;
+    dynamic.add(makeObject(xImg, imgH, col, real?0.95:0.5));
+    const dispH = Math.sign(imgH||1)*Math.min(Math.abs(imgH),12);  // 與視覺尺寸一致
+    const lb = makeLabel(`${real?'實像':'虛像'}·${m>0?'正立':'倒立'}·${Math.abs(m).toFixed(1)}×`,
+                         real?'#ff8a3d':'#3ad1ff', 38);
+    lb.scale.set(10,2.6,1);
+    lb.position.set(xImg, dispH + (dispH>=0?1.7:-1.7), 0); dynamic.add(lb);
+  }
+
+  // ---- 三條主要光線 ----
+  if(state.showRays){
+    const O = V(-p, h);
+    const I = (!nearInfinity && isFinite(xImg)) ? V(xImg, imgH) : null;
+    // 元件上的入射點
+    const P1 = V(0, h);                    // 平行光線
+    const P2 = V(0, 0);                    // 過中心 / 鏡頂
+    const P3 = V(0, -h*f/denom);           // 過焦點光線（與 O→(-f,0) 共線）
+    const hits = [P1,P2,P3];
+    const forwardSign = def.isMirror ? -1 : +1;   // 出射方向（面鏡向左反射）
+    const rayCol = 0xffe08a, dashCol = 0x7fd0ff;
+
+    hits.forEach(P=>{
+      // 入射段：物 → 入射點
+      addLine([O,P], rayCol);
+      if(!I) {
+        // 無清晰像：出射近似平行（用 P3 斜率特例略）→ 直接畫一段出射
+        const dx = forwardSign*30;
+        addLine([P, V(P.x+dx, P.y)], rayCol);
+        return;
+      }
+      // 出射方向 = 通過像點 I 的直線
+      let ux = I.x - P.x, uy = I.y - P.y;
+      const L = Math.hypot(ux,uy)||1; ux/=L; uy/=L;
+      if(real){
+        // 實像：實際光線由 P 會聚到 I，再略延長
+        addLine([P, I], rayCol);
+        addLine([I, V(I.x+ux*4, I.y+uy*4)], rayCol);
+      } else {
+        // 虛像：實際光線沿出射方向發散；反向延長線交於 I
+        let fx=ux, fy=uy;
+        if(Math.sign(fx)!==forwardSign){ fx=-fx; fy=-fy; }
+        addLine([P, V(P.x+fx*34, P.y+fy*34)], rayCol);   // 實際光線
+        addLine([P, I], dashCol, true);                   // 反向延長線（虛線）
+      }
+    });
+  }
+
+  refreshPanel(def, f, q, m, real, nearInfinity);
+}
+
+// ---------- 右側資訊面板 ----------
+function refreshPanel(def, f, q, m, real, nearInfinity){
+  const p = state.p;
+  // 數據
+  document.getElementById('qOut').textContent = nearInfinity ? '∞' : q.toFixed(2);
+  document.getElementById('mOut').textContent = nearInfinity ? '∞' : m.toFixed(2);
+
+  // 標籤
+  const tags = document.getElementById('tags');
+  if(nearInfinity){
+    tags.innerHTML = '<span class="tag down">物在焦點上 → 不成清晰像（光線平行射出）</span>'+
+      '<div class="mini" style="margin-top:8px;">物體剛好在焦點 F 上，反射／折射後的光線變成<b>平行光</b>，'+
+      '既不交叉、也沒有反向延長交點，因此前後都看不到清楚的像。</div>';
+  } else {
+    const upright = m>0;
+    const mag = Math.abs(m);
+    const sizeTxt = mag>1.05?'放大':(mag<0.95?'縮小':'等大');
+    tags.innerHTML =
+      `<span class="tag ${real?'real':'virtual'}">${real?'實像':'虛像'}</span>`+
+      `<span class="tag ${upright?'up':'down'}">${upright?'正立':'倒立'}</span>`+
+      `<span class="tag ${mag>1.05?'up':'down'}">${sizeTxt}（${mag.toFixed(2)}×）</span>`;
+    // 為什麼顛倒 / 為什麼正立 —— 原理說明
+    let why;
+    if(real){
+      why = `<b style="color:var(--real)">為什麼倒立？</b>實像是光線<b>真正交叉會聚</b>而成；`+
+        `從物體頂端來的光，過了交叉點（焦點）就跑到下方，所以像是<b>上下顛倒</b>的。`+
+        `嚴格說左右也相反（課本作圖只用箭頭表示上下顛倒）。實像可以用<b>布幕、底片、視網膜</b>承接。`;
+    } else {
+      why = `<b style="color:var(--virtual)">為什麼正立？</b>虛像的光線<b>並沒有真正交叉</b>，`+
+        `是把發散光線<b>反向延長</b>後的交點，光線方向沒翻轉，所以維持<b>正立</b>。`+
+        `虛像無法用布幕承接，只能用眼睛直接看（如照鏡子、放大鏡）。`;
+    }
+    tags.innerHTML += `<div class="mini" style="margin-top:8px;line-height:1.8;">${why}</div>`;
+  }
+
+  // 課文對照螢光：依元件高亮〈古人鑄鑑〉對應字句
+  const keys = new Set();
+  if(state.type==='concaveMirror')      keys.add('big');                 // 鑑窪則照人面大
+  else if(state.type==='convexMirror'){ keys.add('curve'); keys.add('small'); } // 鑑小則凸 / 收人面令小
+  document.querySelectorAll('#quote span').forEach(s=>{
+    s.classList.toggle('hl', keys.has(s.dataset.k));
+  });
+
+  // 課文詮釋
+  const interp = document.getElementById('interp');
+  const mag = Math.abs(m), upright = m>0;
+  let txt = '';
+  if(state.type==='concaveMirror'){
+    txt = `<b>「凡鑑窪則照人面大」</b>──「窪」就是凹面鏡，它會把人臉<b>放大</b>。`;
+    if(nearInfinity){
+      txt += `此刻物體剛好在焦點 F 上，光線平行射出、無法成清晰像。`;
+    } else if(!real){
+      txt += `現在物體在焦點 F 以內，成<b>正立、放大的虛像</b>——正是臉靠近凹面鏡時看到放大的自己。`;
+    } else {
+      txt += `若把物體移到焦點 F 以外，光線交叉、改成<b>倒立的實像</b>（這也呼應〈陽燧〉篇「過此遂倒」）。`;
+    }
+  } else if(state.type==='convexMirror'){
+    txt = `<b>「凸則照人面小……故令微凸，收人面令小，則鑑雖小而能全納人面」</b>──`+
+      `凸面鏡永遠成<b>正立、縮小的虛像</b>，視野變廣，所以即使鏡子很小，也能把整張臉「收」進去。`+
+      `古人就是因為這個道理，才把小鏡特意做成<b>微凸</b>。`;
+  } else {
+    txt = `延伸：課文〈古人鑄鑑〉講的是<b>面鏡（鑑）</b>。透鏡與面鏡同屬一套幾何光學──`+
+      `${def.name}的成像規律可與面鏡互相對照：${def.fSign>0?'會聚':'發散'}光線、`+
+      `${state.type==='convexLens'?'近看放大（如放大鏡）、遠看倒立實像（如相機）':'恆成正立縮小虛像（如近視眼鏡）'}。`;
+  }
+  txt += `<div style="margin-top:8px;color:var(--sub);">古人還會「<b>量鑑之小大，增損高下</b>」，`+
+    `依鏡子大小調整凹凸與弧度，使「人面與鑑大小相若」；沈括藉「<b>師曠傷知音</b>」感嘆後人不懂這番巧思，`+
+    `把古鏡都磨平了。</div>`;
+  interp.innerHTML = txt;
+
+  // 現實應用
+  document.getElementById('apps').innerHTML = APPS[state.type];
+  // 公式提示
+  document.getElementById('formula').innerHTML =
+    `成像公式：1/p ＋ 1/q ＝ 1/f　（本元件 f ＝ ${ (def.fSign*state.f).toFixed(1) }）`+
+    `；q＞0 為實像、q＜0 為虛像。`;
+}
+
+// ---------- 各元件的現實應用文字 ----------
+const APPS = {
+  concaveMirror:`
+    <li><b>陽燧取火 / 太陽能爐</b>：平行陽光會聚於焦點，溫度極高可點火（課文原始用途）。</li>
+    <li><b>汽車頭燈、探照燈</b>：把燈泡放在焦點，反射出平行強光。</li>
+    <li><b>化妝鏡、刮鬍鏡、牙醫口鏡</b>：臉靠近（焦點內）→ 正立放大虛像，看得更清楚。</li>
+    <li><b>反射式天文望遠鏡、衛星天線</b>：大口徑凹面會聚微弱光（電波）成像。</li>`,
+  convexMirror:`
+    <li><b>汽車後視鏡、機車後照鏡</b>：永遠是正立、縮小的虛像，<b>視野更廣</b>。</li>
+    <li><b>道路轉角凸面鏡</b>：彎道、地下停車場看見來車，減少死角。</li>
+    <li><b>賣場 / 電梯防盜廣角鏡</b>：一面鏡子看遍整個空間。</li>
+    <li><b>原理</b>：凸面鏡 f＜0，不論物體遠近都成<b>正立縮小虛像</b>，所以「物比看起來近」。</li>`,
+  convexLens:`
+    <li><b>放大鏡</b>：物在焦點內 → 正立放大虛像（對應課文「迫而照之則正」的透鏡版）。</li>
+    <li><b>相機 / 手機鏡頭、投影機</b>：物在焦點外 → 倒立實像投在感光元件 / 布幕上。</li>
+    <li><b>老花（遠視）眼鏡、顯微鏡、望遠鏡物鏡</b>：會聚光線輔助成像。</li>
+    <li><b>人眼水晶體</b>：本身就是可變焦的凸透鏡，在視網膜成倒立實像。</li>`,
+  concaveLens:`
+    <li><b>近視眼鏡</b>：先把光線發散，讓影像往後落到視網膜上。</li>
+    <li><b>伽利略望遠鏡目鏡、門上「貓眼」</b>：取得正立、縮小、廣角的視野。</li>
+    <li><b>相機變焦鏡組</b>：與凸透鏡搭配校正像差、改變焦距。</li>
+    <li><b>原理</b>：凹透鏡 f＜0，恆成<b>正立縮小虛像</b>，光線發散不會聚。</li>`,
+};
+
+// ---------- UI 綁定 ----------
+function bindSlider(id, key, valId, fix=1){
+  const s = document.getElementById(id), v = document.getElementById(valId);
+  s.addEventListener('input', ()=>{ state[key]=parseFloat(s.value); v.textContent=state[key].toFixed(fix); update(); });
+}
+bindSlider('pSlider','p','pVal');
+bindSlider('fSlider','f','fVal');
+bindSlider('hSlider','h','hVal');
+
+document.querySelectorAll('#elemGrid .elemBtn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('#elemGrid .elemBtn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); state.type=b.dataset.type; update();
+  });
+});
+document.querySelectorAll('#objGrid .elemBtn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('#objGrid .elemBtn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); state.obj=b.dataset.obj; update();
+  });
+});
+function toggleBtn(id, key){
+  const b=document.getElementById(id);
+  b.addEventListener('click', ()=>{ state[key]=!state[key]; b.classList.toggle('on',state[key]); update(); });
+}
+toggleBtn('rayBtn','showRays');
+toggleBtn('markBtn','showMark');
+
+// 自動演示：物體由近到遠來回移動
+const anim = { on:false, dir:+1, speed:0.10 };
+const playBtn = document.getElementById('playBtn');
+playBtn.addEventListener('click', ()=>{
+  anim.on = !anim.on;
+  playBtn.classList.toggle('on', anim.on);
+  playBtn.textContent = anim.on ? '⏸ 暫停演示' : '▶ 自動演示（近→遠）';
+});
+function stepAnim(){
+  if(!anim.on) return;
+  let p = state.p + anim.dir*anim.speed;
+  const lo = parseFloat(pSlider.min), hi = parseFloat(pSlider.max);
+  if(p >= hi){ p = hi; anim.dir = -1; }
+  if(p <= lo){ p = lo; anim.dir = +1; }
+  state.p = p;
+  pSlider.value = p; pVal.textContent = p.toFixed(1);
+  update();
+}
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  state.p=4; state.f=6; state.h=3;
+  pSlider.value=4; fSlider.value=6; hSlider.value=3;
+  pVal.textContent='4.0'; fVal.textContent='6.0'; hVal.textContent='3.0'; update();
+});
+
+// 視角
+document.getElementById('view2d').addEventListener('click', ()=>{
+  camera.position.set(0,0,46); controls.target.set(0,1,0);
+});
+document.getElementById('view3d').addEventListener('click', ()=>{
+  camera.position.set(12,12,40); controls.target.set(0,1,0);
+});
+// 說明
+const overlay=document.getElementById('overlay');
+document.getElementById('helpBtn').addEventListener('click',()=>overlay.style.display='grid');
+document.getElementById('closeHelp').addEventListener('click',()=>overlay.style.display='none');
+
+// ---------- 視窗 / 動畫 ----------
+function resize(){
+  const w=canvas.clientWidth, h=canvas.clientHeight;
+  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+function loop(){ requestAnimationFrame(loop); stepAnim(); controls.update(); renderer.render(scene,camera); }
+
+resize(); update(); loop();
+</script>
+</body>
+</html>

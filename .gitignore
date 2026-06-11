@@ -1,0 +1,7 @@
+# 參考用教科書 PDF（版權，不上傳）
+*.pdf
+
+# 暫存
+*.txt
+.DS_Store
+Thumbs.db
