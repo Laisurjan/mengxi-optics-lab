@@ -330,15 +330,27 @@ function buildElement(){
     }
     const geo = new THREE.LatheGeometry(pts, 80);
     geo.rotateZ(-Math.PI/2);                   // 旋轉軸 Y → 對齊光軸 X
-    const mat = new THREE.MeshStandardMaterial({
-      color:0xcfd6e6, metalness:0.95, roughness:0.18, side:THREE.DoubleSide,
+    // 透藍色玻璃鏡面（Liquid Glass 風格：透光、淺藍、高清漆）
+    const mat = new THREE.MeshPhysicalMaterial({
+      color:0xb8dcff, metalness:0.1, roughness:0.06,
+      transmission:0.55, transparent:true, opacity:0.7, thickness:1.5, ior:1.5,
+      clearcoat:1, clearcoatRoughness:0.04, side:THREE.DoubleSide,
     });
     const mesh = new THREE.Mesh(geo, mat);
     elementMesh.add(mesh);
-    // 背面暗色殼
+    // 背面霧面淡藍殼
     const back = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-      color:0x223, metalness:0.2, roughness:0.9, side:THREE.BackSide}));
+      color:0xcfe4f8, metalness:0.15, roughness:0.55, transparent:true, opacity:0.4,
+      side:THREE.BackSide}));
     elementMesh.add(back);
+    // 鏡緣細環（標出開口位置與方向）
+    const sagEdge = R - Math.sqrt(Math.max(0, R*R - apR*apR));
+    const rim = new THREE.Mesh(
+      new THREE.TorusGeometry(apR, 0.14, 8, 80),
+      new THREE.MeshStandardMaterial({color:0x7ab5e8, metalness:0.6, roughness:0.25}));
+    rim.rotation.y = Math.PI/2;
+    rim.position.x = def.fSign>0 ? -sagEdge : +sagEdge;
+    elementMesh.add(rim);
   } else {
     const apR = 7, half = 1.4, N = 36, top=[], bot=[];
     for(let i=0;i<=N;i++){
