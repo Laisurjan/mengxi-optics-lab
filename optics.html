@@ -307,8 +307,9 @@ function buildElement(){
     for(let i=0;i<=N;i++){
       const r = apR*i/N;
       const sag = R - Math.sqrt(Math.max(0,R*R - r*r)); // 凹陷量
-      // 凹面鏡：開口朝物體(左,-X) → 鏡面往 +X 退；凸面鏡相反
-      const x = def.fSign>0 ? +sag : -sag;
+      // 旋轉後輪廓 +Y→+X。凹面鏡(fSign>0)：凹口須朝向物體(左,-X)，
+      // 故鏡緣伸向 -X、頂點在 X=0 → 用 -sag；凸面鏡(fSign<0)凸面朝物體 → 用 +sag
+      const x = def.fSign>0 ? -sag : +sag;
       pts.push(new THREE.Vector2(r, x));
     }
     const geo = new THREE.LatheGeometry(pts, 80);
